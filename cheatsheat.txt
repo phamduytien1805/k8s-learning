@@ -1,0 +1,32 @@
+kubectl apply -f hello-kube.yaml 
+kubectl get pod
+kubectl port-forward pod/hello-kube 3000:3000 // forward port to access from outside cluster if service not defined yet
+kubectl delete pod hello-kube
+kubectl create ns testing // create namespace
+kubectl get rc // get replica controllers
+kubectl delete rc hello-rc //delete replica controllers
+
+Pods (resource support for run containers)
+
+ReplicaSets và ReplicationController: (resource support for high availability application)
+ReplicaSets more flexible with label selector, ReplicaSets allow some expressions or matching to select pod.
+Example: RC cannot match label have env=prod and env=test at the same time but RS can by using env=*
+RS have matchExpressions with 4 basics operators:  In, NotIn, Exists, DoesNotExist
+
+DaemonSets have exactly one replica on each node. DaemonSets are used for logging and monitoring. More details: https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/
+
+Services are resoruces which create a single/constant point for a group of pods.
+Each services have a constant IP and Port, execept re-created.
+Services are used to exposed inteface for client interact with backend pods.
+Why need services?
+- Pods are ephemeral: each pod have its own IP, it can be deleted, repalaced by another anytime, or when node die, pod will be created on
+others node. When pod created, it will have different IP.
+- replicas pods, if we have 3 replicas of pods. Which one client should send request?
+So we need a single point for client to interact with our pods.
+Services manage connection by "label selectors"
+Services have 4 types: ClusterIP, NodePort, ExternalName, LoadBalancer. More details: https://kubernetes.io/docs/concepts/services-networking/service/
+- ClusterIP: internal communication between pods in cluster.
+
+kubectl get svc //get service
+
+k8s provide local DNS so that we can access services through DNS instead of IP address.
