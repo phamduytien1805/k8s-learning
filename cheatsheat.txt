@@ -15,11 +15,11 @@ RS have matchExpressions with 4 basics operators:  In, NotIn, Exists, DoesNotExi
 
 DaemonSets have exactly one replica on each node. DaemonSets are used for logging and monitoring. More details: https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/
 
-Services are resoruces which create a single/constant point for a group of pods.
-Each services have a constant IP and Port, execept re-created.
-Services are used to exposed inteface for client interact with backend pods.
+Services are resources which create a single/constant point for a group of pods.
+Each services have a constant IP and Port, except re-created.
+Services are used to exposed interface for client interact with backend pods.
 Why need services?
-- Pods are ephemeral: each pod have its own IP, it can be deleted, repalaced by another anytime, or when node die, pod will be created on
+- Pods are ephemeral: each pod have its own IP, it can be deleted, replaced by another anytime, or when node die, pod will be created on
 others node. When pod created, it will have different IP.
 - replicas pods, if we have 3 replicas of pods. Which one client should send request?
 So we need a single point for client to interact with our pods.
@@ -30,3 +30,69 @@ Services have 4 types: ClusterIP, NodePort, ExternalName, LoadBalancer. More det
 kubectl get svc //get service
 
 k8s provide local DNS so that we can access services through DNS instead of IP address.
+
+Deployments: helps us to update the application that not affected much to clients.
+2 way to deploy new image of application:
+- Recreate: if we just use ReplicaSets, when we need to update application we first have to update template
+of RS with new image, then we delete all current pods, new pod with new template will be created. This way will
+cause a down time to client.
+- Rolling update: we deploy new version of application. When new pods is up, the requests will routed to new pods
+and will remove old pods with old template when all new pods is up. This reduce the downtime for our application
+but cons are our application will have 2 versions running so that it can cause unexpected behaviour bugs.
+
+there another way is blue and green deployment not in scope of deployments: https://martinfowler.com/bliki/BlueGreenDeployment.html
+Deployments provide us 2 strategies as above, all automated, new versions that are deployed have a history version so that
+we can rollback or rollout without CI/CD need.
+
+kubectl apply -f hello-deploy.yaml --record
+kubectl set image deployment hello-app hello-app=080196/hello-app:v2 // update image for deployment
+kubectl rollout status deploy hello-app // checking if update is done
+
+How do deployments update pods?
+when we change image in deployment, it will update the template to ReplicaSets then pods will be created
+with the pointed strategy in deployment. Old ReplicaSets are not deleted, the replica attributes of those RS
+is updated to 0 so it can give us ability to rollback to old version when new version have errors.
+
+kubectl rollout history deploy hello-app //check the history
+kubectl rollout undo deployment hello-app --to-revision=2 // roll back to specific deployment in history
+
+deployment's revision default value is 10.
+
+
+Volumes: is a mount pointer from file system server to container in pod.
+3 types of volumes: to share between containers in a pod, volume attached in a worker node, volume attached in cluster.
+- Empty dir: will create a empty directory in a pod, container in that pod can write. It live in a lifecycle of a pod.
+We use this when want to share between containers in a pod but not persistent when pod is deleted.
+- Host path: create mount point from pod to filesystem of worker node, data saved in worker node is not deleted
+when pod is deleted. Each node will have different data saved in filesystem.
+- cloud storage to save persistent data: only support cloud platform (such as aws, google cloud, azure). Data will persistent
+for container in pods on different worker node. (gcePersistentDisk, awsElasticBlockStore, azureDisk.)
+
+For above volumes dev need to know the architecture underlying, 
+for example: we want to create hostpath we need to know the path to worker node or 
+awsElasticBlockStore we need to know the EBS name on AWS
+PersistentVolumeClaims, PersistentVolumes are here to help:
+- Administrator define storage architecture underlying in PersistentVolumes resources, for example: using cloud volumes.
+- Dev will create PersistentVolumeClaims resources to access the PersistentVolumes defined, don't need to care about the underlying
+storage architecture.
+Note: PersistentVolumes not included in any namespace, it is cluster resource, in K8S there are two resource.
+- namespace resource which can be pods, deployment.
+- cluster resource which can be node, PersistentVolumes.
+
+kubectl get pv // get PersistentVolumes
+
+when define PersistentVolumes, we have persistentVolumeReclaimPolicy attribute, this is for which action PersistentVolumes
+should do when PersistentVolumeClaims is deleted.
+3 mode: Retain, Recycle, Delete. more details: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming
+
+When Administrator create PersistentVolumes manually, we call Pre provisioning. K8S provide use automatic create PersistentVolumes
+called Dynamic provisioning. To do we use StorageClasses resources with provisioner that cloud provided, if not cloud platform
+we have to install provisioner.
+When we created StorageClasses, In PersistentVolumeClaims we add storageClassName attribute, when PersistentVolumeClaims created, it request
+to StorageClasses related to storageClassName to create PersistentVolumes.
+When we define PersistentVolumeClaims without specific storageClassName, it will point to the default StorageClasses.
+
+kubectl get sc // get StorageClasses
+
+ConfigMap: passing configuration values to containers
+Secret: passing sensitive values such as key, password database ,etc...
