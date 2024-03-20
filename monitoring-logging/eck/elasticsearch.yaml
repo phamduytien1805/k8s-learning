@@ -1,0 +1,28 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+spec:
+  version: 8.6.2
+  nodeSets: #define node group for elasticsearch which named default and amount node is 1
+    - name: default
+      count: 1
+      # volumeClaimTemplates:
+      #   - metadata:
+      #       name: elasticsearch-data # Do not change this name unless you set up a volume mount for the data path.
+      #     spec:
+      #       accessModes:
+      #         - ReadWriteOnce
+      #       resources:
+      #         requests:
+      #           storage: 10Gi
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 1Gi # for demo purpose
+                  cpu: 2
+                limits:
+                  memory: 1Gi # for demo purpose
